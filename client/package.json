@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@helia/unixfs": "^3.0.6",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "buffer": "^6.0.3",
+    "eslint-plugin-react": "^7.34.3",
+    "helia": "^4.2.4",
     "ipfs-http-client": "^60.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

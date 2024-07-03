@@ -1,10 +1,13 @@
 import React, { Component } from 'react';
 import './App.css';
 import { Buffer } from 'buffer';
-import { create } from 'ipfs-http-client';
 import Access_Control from './contracts/Access_Control.json'
-
-const ipfs = create({ url: '/ip4/127.0.0.1/tcp/5001' });
+import { createHelia } from 'helia'
+import { unixfs } from '@helia/unixfs'
+// create a Helia node
+const helia = await createHelia();
+// create a filesystem on top of Helia, in this case it's UnixFS
+const fs = unixfs(helia);
 
 class App extends Component {
   constructor(props) {
@@ -29,16 +32,37 @@ class App extends Component {
     }
   };
 
-  handleSubmit = (event) => {
+  handleSubmit = async (event) => {
     event.preventDefault();
     //const { file } = this.state;
     if (this.state.buffer) {
       console.log('File to be uploaded:', this.state.buffer);
+      
       // Handle the file upload process here
       // You can use libraries like axios or fetch to send the file to a server
     } else {
       console.log('No file selected.');
     }
+    // ipfs.add(this.state.buffer,(error,result)=>{
+    //   console.log("result:",result);
+    //   if(error){
+    //     console.error(error);
+    //     return;
+    //   }
+    // })
+    // try {
+    //   const created = await client.add(this.state.buffer);
+    //   const url = `https://ipfs.infura.io/ipfs/${created.path}`;
+    //   setUrlArr(prev => [...prev, url]);
+    //   console.log("ipfs rezz:",created)
+    // } catch (error) {
+    //   console.log(error.message);
+    // }
+    
+    const cid = await fs.addBytes(this.state.buffer);
+    console.log('Added file:', cid.toString());
+    
+
   };
 
   render() {
