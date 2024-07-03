@@ -43,25 +43,21 @@ class App extends Component {
     } else {
       console.log('No file selected.');
     }
-    // ipfs.add(this.state.buffer,(error,result)=>{
-    //   console.log("result:",result);
-    //   if(error){
-    //     console.error(error);
-    //     return;
-    //   }
-    // })
-    // try {
-    //   const created = await client.add(this.state.buffer);
-    //   const url = `https://ipfs.infura.io/ipfs/${created.path}`;
-    //   setUrlArr(prev => [...prev, url]);
-    //   console.log("ipfs rezz:",created)
-    // } catch (error) {
-    //   console.log(error.message);
-    // }
-    
+       
     const cid = await fs.addBytes(this.state.buffer);
     console.log('Added file:', cid.toString());
-    
+    //let text = ''
+    let chunks=[];
+
+for await (const chunk of fs.cat(cid)) {
+  // text += decoder.decode(chunk, {
+  //   stream: true
+  // })
+  chunks.push(chunk);
+
+}
+const fileBuffer = Buffer.concat(chunks);
+  console.log('Retrieved file:', fileBuffer);
 
   };
 
