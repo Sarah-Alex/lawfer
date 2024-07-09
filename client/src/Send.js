@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './App.css';
+import './Send.css';
 import { Buffer } from 'buffer';
 import axios from 'axios';
 import Access_Control from './contracts/Access_Control.json';
@@ -13,7 +13,7 @@ import Web3 from {web3};
 // create a filesystem on top of Helia, in this case it's UnixFS
 // const fs = unixfs(helia);
 
-const App = () => {
+const Send = () => {
   const [buffer, setBuffer] = useState(null);
   const [file, setFile] = useState(null);
 
@@ -61,8 +61,8 @@ const App = () => {
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
+    <div className="Send">
+      <header className="Send-header">
         <h1>Upload File</h1>
         <form onSubmit={handleSubmit}>
           <input type="file" onChange={handleFileChange} />
@@ -73,4 +73,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default Send;

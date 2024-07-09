@@ -17,6 +17,14 @@ import Access_Control from './contracts/Access_Control.json';
 //     }
 // }
 function Login() {
+    const [formData, setFormData] = useState({
+        username: '',
+        userId: '',
+      });
+
+    const [account, setAccount] = useState('');
+
+
     useEffect(() => {
         const loadWeb3 = async () => {
           if (window.ethereum) {
@@ -38,10 +46,7 @@ function Login() {
         loadWeb3();
       }, []);
     
-  const [formData, setFormData] = useState({
-    username: '',
-    userId: ''
-  });
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,12 +56,25 @@ function Login() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log(formData);
-    // verify if valid user
+    // verify if valid user:
+    try {
+      const web3 = window.web3;
+      const accounts = await web3.eth.getAccounts();
+      if (accounts.length > 0) {
+        const userAccount = accounts[0]; 
+        setAccount(userAccount);
+        console.log('User account:', userAccount);
+      } else {
+        console.log('No accounts found');
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+    }
+  
 
-    
   };
 
   return (
