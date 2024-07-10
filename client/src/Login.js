@@ -19,10 +19,11 @@ import Access_Control from './contracts/Access_Control.json';
 function Login() {
     const [formData, setFormData] = useState({
         username: '',
-        userId: '',
+        userID: '',
       });
 
     const [account, setAccount] = useState('');
+    const [contract, setContract] = useState('');
 
 
     useEffect(() => {
@@ -61,20 +62,45 @@ function Login() {
     console.log(formData);
     // verify if valid user:
     try {
-      const web3 = window.web3;
+      const web3 = window.web3; // Ensure web3 is properly imported or initialized
       const accounts = await web3.eth.getAccounts();
+  
       if (accounts.length > 0) {
-        const userAccount = accounts[0]; 
+        const userAccount = accounts[0];
         setAccount(userAccount);
         console.log('User account:', userAccount);
+  
+        const networkId = await web3.eth.net.getId();
+        console.log(networkId);
+        const networkData = Access_Control.networks[networkId];
+  
+        if (networkData) {
+          console.log("netData:", networkData);
+          const abi = Access_Control.abi;
+          const address = networkData.address;
+  
+          // Fetch contract
+          const contract = new web3.eth.Contract(abi, address);
+          setContract(contract);
+          console.log(contract);
+  
+          // Example usage of contract method (adjust as per your contract's method)
+          const result = await contract.methods.verifyUser(userAccount,formData.username,formData.userID).call();
+          console.log("Verification result:", result);
+          // contract.methods.verifyUser(userAccount,formData.username,formData.userID).call().then(function(r){
+          //  console.log(r);
+          // });
+          
+          
+        } else {
+          window.alert('Smart contract not deployed to detected network');
+        }
       } else {
         console.log('No accounts found');
       }
     } catch (error) {
-      console.error('Error fetching accounts:', error);
+      console.error('Error:', error);
     }
-  
-
   };
 
   return (
@@ -91,9 +117,9 @@ function Login() {
           />
           <input
             type="text"
-            name="userId"
+            name="userID"
             placeholder="User ID"
-            value={formData.userId}
+            value={formData.userID}
             onChange={handleChange}
           />
           <button type="submit">Submit</button>

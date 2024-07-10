@@ -17,20 +17,29 @@ modifier onlyOwner() {
     _;
 }
 mapping(address=>user) userList;
-function getuserList(address add) public view onlyOwner returns(string memory, string memory){
-    return (userList[add].username, userList[add].userID);
+function getuserList(address _add) public view onlyOwner returns(string memory, string memory){
+    return (userList[_add].username, userList[_add].userID);
 }
-function addUser(address userAddress, string memory username, string memory userID) public onlyOwner(){
-    require(bytes(userList[userAddress].username).length == 0, "User already exists");
+function addUser (address _userAddress, string memory _username, string memory _userID) public onlyOwner(){
+    require(bytes(userList[_userAddress].username).length == 0, "User already exists");
     user memory new_user;
-    new_user.username=username;
-    new_user.userID=userID;
-    userList[userAddress]=new_user;
+    new_user.username=_username;
+    new_user.userID=_userID;
+    userList[_userAddress]=new_user;
 }
-function deleteUser(address userAddress) public onlyOwner()
+function deleteUser (address _userAddress) public onlyOwner()
 {
-    require(bytes(userList[userAddress].username).length != 0, "User does not exist");
-    delete userList[userAddress];
+    require(bytes(userList[_userAddress].username).length != 0, "User does not exist");
+    delete userList[_userAddress];
+}
+function verifyUser(address _userAddress, string memory _username, string memory _userID) public view returns (bool) {
+    require(bytes(userList[_userAddress].username).length != 0, "User does not exist");
+    if (keccak256(abi.encodePacked(userList[_userAddress].username)) == keccak256(abi.encodePacked(_username)) &&
+        keccak256(abi.encodePacked(userList[_userAddress].userID)) == keccak256(abi.encodePacked(_userID))) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 }
