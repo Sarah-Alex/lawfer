@@ -68,6 +68,7 @@ const Send = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     let ipfshash;
+    let userAccount
     if (buffer && file) {
       console.log('File to be uploaded:', buffer);
       try {
@@ -103,8 +104,8 @@ const Send = () => {
       const accounts = await web3.eth.getAccounts();
 
       if (accounts.length > 0) {
-          const userAccount = accounts[0];
-          setAccount(userAccount);
+          userAccount = accounts[0];
+          //setAccount(userAccount);
           console.log('User account:', userAccount);
 
           const networkId = await web3.eth.net.getId();
@@ -120,12 +121,13 @@ const Send = () => {
               console.log('Contract:', contract);
               const user = await contract.methods.userFromName(userName).call();
               console.log('user:',user)
-              if(user.username.length==0){
+              if(user.username.length===0){
                 window.alert("wrong username, try again")
               }
               else{
                 let tempdocid=docName+userName;
-                const response= await contract.methods.addDocument(docName,ipfshash,tempdocid,user.useraddress).send({from:account});
+                //console.log("account address", account)
+                const response= await contract.methods.addDocument(docName,ipfshash,tempdocid,user.useraddress).send({from:userAccount});
                 console.log("response:",response);
                }
           }else {
@@ -140,8 +142,8 @@ const Send = () => {
   };
 
   return (
-    <div className="Send">
-      <header className="Send-header">
+    <div className="App">
+      <header className="App-header">
         <h1>Upload File</h1>
         <form onSubmit={handleSubmit}>
           <input type="file" onChange={handleFileChange} />

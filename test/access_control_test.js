@@ -289,5 +289,19 @@ contract("Access_Control", (accounts) => {
         );
     });
 
+    it("should get documents for the correct user", async () => {
+        await instance.addUser(accounts[1], "user1", "userID1", false, { from: accounts[0] });
+        await instance.addUser(accounts[2], "sender1", "sendID1", true, { from: accounts[0] });
+
+        await instance.addDocument("doc1", "ipfsHash1", "docID1", accounts[1], { from: accounts[2] });
+        await instance.addDocument("doc2", "ipfsHash2", "docID2", accounts[1], { from: accounts[2] });
+
+        const documents = await instance.getDocuments(accounts[1], { from: accounts[1] });
+
+        assert.equal(documents.length, 2, "User should have two documents");
+        assert.equal(documents[0], "doc1", "First document name should be doc1");
+        assert.equal(documents[1], "doc2", "Second document name should be doc2");
+    });
+
 });
 

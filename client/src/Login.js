@@ -8,6 +8,7 @@ function Login() {
     const [formData, setFormData] = useState({
         username: '',
         userID: '',
+        userphone:''
     });
 
     const [account, setAccount] = useState('');
@@ -46,7 +47,7 @@ function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log(formData);
-
+        console.log(formData.userphone)
         try {
             const web3 = window.web3;
             const accounts = await web3.eth.getAccounts();
@@ -64,22 +65,28 @@ function Login() {
                     console.log("Network data:", networkData);
                     const abi = Access_Control.abi;
                     const address = networkData.address;
-
+                    console.log(abi)
                     const contract = new web3.eth.Contract(abi, address);
                     setContract(contract);
                     console.log('Contract:', contract);
-
+                    console.log(userAccount, formData.username, formData.userID)
                     const result = await contract.methods.verifyUser(userAccount, formData.username, formData.userID).call();
                     console.log("Verification result:", result);
 
-                    if (result === 0) {
+                    if (result == 0) {
                         window.alert("Invalid credentials. Please try again.");
                     } else if(result==1){
+
                         const token = 'dummy-jwt-token'; // Replace with actual token logic
                         localStorage.setItem('token', token);
                         navigate('/send'); // Redirect to Send page
+                    } else if(result==2){
+                        const token = 'dummy-jwt-token'; // Replace with actual token logic
+                        localStorage.setItem('token', token);
+                        navigate('/receive');
+                        window.alert("you are a reciever, page not built yet....")
                     }
-                } else {
+                } else  {
                     window.alert('Smart contract not deployed to detected network');
                 }
             } else {
@@ -107,6 +114,14 @@ function Login() {
                         name="userID"
                         placeholder="User ID"
                         value={formData.userID}
+                        onChange={handleChange}
+                    />
+                    <input
+                        type="tel"
+                        name="userphone"
+                        placeholder="Phone no."
+                        pattern="[0-9]{10}"
+                        value={formData.userphone}
                         onChange={handleChange}
                     />
                     <button type="submit">Submit</button>

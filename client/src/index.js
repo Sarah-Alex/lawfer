@@ -43,6 +43,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Login from './Login';
 //import Home from './Home';
 import Send from './Send';
+import Receive from './Recieve';
 import ProtectedRoute from './ProtectedRoute';
 import reportWebVitals from './reportWebVitals';
 
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
       {
         path: '/send',
         element: <Send />,
+      },
+      {
+        path: '/receive',
+        element: <Receive />,
       },
     ],
   },
