@@ -33,6 +33,7 @@ contract Access_Control {
     event UserDeleted(address userAddress, bool sender);
     event DocumentAdded(address sender, address userAddress, string docname, string ipfshash, string docID);
     event DocumentAccessed(address userAddress, string docname);
+    event DocumentsListed(address userAdress, string[] docnames);
     event AccessDenied(address sender, address userAddress, string message);
 
     function getuserList(address _add) public view onlyOwner returns (string memory, string memory) {
@@ -119,7 +120,8 @@ contract Access_Control {
             docnames[i] = doc.docname;
         }
 
-        emit DocumentAccessed(_userAddress, "all documents");
+        //emit DocumentAccessed(_userAddress, "all documents");
+        emit DocumentsListed(_userAddress, docnames);
 
         return docnames;
     }

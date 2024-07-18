@@ -55,9 +55,12 @@ const Receive = () => {
                     console.log("result:",result);
                     const docNum = await contract.methods.getDocCount(userAccount).call();
                     console.log("num of docs:", docNum);
-                    const docs = await contract.methods.getDocuments(userAccount).send({from:account});
+                    const receipt = await contract.methods.getDocuments(userAccount).send({from:account});
+                    console.log("receipt:", receipt)
+                    //setDocumentOptions(docs);
+                    console.log('Document options:', receipt.events.DocumentsListed.returnValues.docnames);
+                    const docs=receipt.events.DocumentsListed.returnValues.docnames;
                     setDocumentOptions(docs);
-                    console.log('Document options:', docs);
                     
                 } catch (error) {
                     console.error('Error fetching documents:', error);
