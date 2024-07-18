@@ -7,6 +7,7 @@ const Receive = () => {
     const [account, setAccount] = useState('');
     const [contract, setContract] = useState(null);
     const [documentOptions, setDocumentOptions] = useState([]);
+    const [selectedDocument, setSelectedDocument] = useState('');
 
     const loadWeb3 = async () => {
         if (window.ethereum) {
@@ -52,16 +53,15 @@ const Receive = () => {
                 try {
                     console.log("about to try");
                     const result = await contract.methods.verifyUser(userAccount, "username0", "userID0").call();
-                    console.log("result:",result);
+                    console.log("result:", result);
                     const docNum = await contract.methods.getDocCount(userAccount).call();
                     console.log("num of docs:", docNum);
-                    const receipt = await contract.methods.getDocuments(userAccount).send({from:account});
-                    console.log("receipt:", receipt)
-                    //setDocumentOptions(docs);
-                    console.log('Document options:', receipt.events.DocumentsListed.returnValues.docnames);
-                    const docs=receipt.events.DocumentsListed.returnValues.docnames;
+                    const receipt = await contract.methods.getDocuments(userAccount).send({ from: account });
+                    console.log("receipt:", receipt);
+                    const docs = receipt.events.DocumentsListed.returnValues.docnames;
                     setDocumentOptions(docs);
-                    
+                    console.log('Document options:', docs);
+
                 } catch (error) {
                     console.error('Error fetching documents:', error);
                 }
@@ -75,12 +75,23 @@ const Receive = () => {
 
     const init = async () => {
         await loadWeb3();
-        //await loadBlockchainData();
     };
 
     useEffect(() => {
         init().catch(error => console.error('Error:', error));
     }, []); // Empty dependency array ensures this runs once on mount
+
+    const handleDocumentChange = (event) => {
+        setSelectedDocument(event.target.value);
+    };
+
+    const handleSubmit = async(event) => {
+        event.preventDefault();
+        console.log('Selected document:', selectedDocument);
+        const receipt = await contract.methods.getIPFSHashFromDocname(account, selectedDocument).send({ from: account });
+        console.log("getIPFS receipt:", receipt);
+        // Add further logic here for handling the selected document, e.g., downloading it
+    };
 
     return (
         <div className="App">
@@ -88,11 +99,22 @@ const Receive = () => {
                 <h1>Download File</h1>
                 <button onClick={loadBlockchainData}>Load Documents</button>
                 {documentOptions.length > 0 ? (
-                    <ul>
+                    <form onSubmit={handleSubmit}>
                         {documentOptions.map((doc, index) => (
-                            <li key={index}>{doc}</li>
+                            <div key={index}>
+                                <input 
+                                    type="radio" 
+                                    id={`doc-${index}`} 
+                                    name="document" 
+                                    value={doc} 
+                                    checked={selectedDocument === doc} 
+                                    onChange={handleDocumentChange} 
+                                />
+                                <label htmlFor={`doc-${index}`}>{doc}</label>
+                            </div>
                         ))}
-                    </ul>
+                        <button type="submit">Submit</button>
+                    </form>
                 ) : (
                     <p>No documents found</p>
                 )}

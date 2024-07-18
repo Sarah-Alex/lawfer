@@ -128,6 +128,10 @@ contract Access_Control {
 
     function getIPFSHashFromDocname(address _userAddress, string memory _docname) public returns (string memory) {
         require(msg.sender == _userAddress, "attempt to access denied");
+        // if (msg.sender != _userAddress) {
+        //     emit AccessDenied(msg.sender, _userAddress, "attempt to access denied");
+        //     revert("attempt to access denied");
+        // }
 
         Document[] storage documents = docAccessList[_userAddress];
 
