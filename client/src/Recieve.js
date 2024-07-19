@@ -94,7 +94,27 @@ const Receive = () => {
         console.log("docname:", docname);
         const hash= receipt.events.DocumentAccessed.returnValues.dochash;
         console.log("hash:", hash);
+        downloadFileFromIPFS(hash);
         // Add further logic here for handling the selected document, e.g., downloading it
+    };
+
+    const downloadFileFromIPFS = async (hash) => {
+        const url = `https://gateway.pinata.cloud/ipfs/${hash}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = selectedDocument; // Use document name as the download filename
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+        }
     };
 
     return (

@@ -125,7 +125,7 @@ const Send = () => {
                 window.alert("wrong username, try again")
               }
               else{
-                let tempdocid=docName+userName;
+                let tempdocid=userName+docName;
                 //console.log("account address", account)
                 const response= await contract.methods.addDocument(docName,ipfshash,tempdocid,user.useraddress).send({from:userAccount});
                 console.log("response:",response);
