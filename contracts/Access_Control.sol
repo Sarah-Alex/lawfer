@@ -32,7 +32,8 @@ contract Access_Control {
     event UserAdded(address userAddress, string username, string userID, bool sender);
     event UserDeleted(address userAddress, bool sender);
     event DocumentAdded(address sender, address userAddress, string docname, string ipfshash, string docID);
-    event DocumentAccessed(address userAddress, string docname);
+    event DocumentAccessed(address userAddress, string docname, string dochash);
+    //event DocumentAccessedHash(address userAddress, string dochash);
     event DocumentsListed(address userAdress, string[] docnames);
     event AccessDenied(address sender, address userAddress, string message);
 
@@ -128,16 +129,14 @@ contract Access_Control {
 
     function getIPFSHashFromDocname(address _userAddress, string memory _docname) public returns (string memory) {
         require(msg.sender == _userAddress, "attempt to access denied");
-        // if (msg.sender != _userAddress) {
-        //     emit AccessDenied(msg.sender, _userAddress, "attempt to access denied");
-        //     revert("attempt to access denied");
-        // }
+        
 
         Document[] storage documents = docAccessList[_userAddress];
 
         for (uint i = 0; i < documents.length; i++) {
             if (keccak256(abi.encodePacked(documents[i].docname)) == keccak256(abi.encodePacked(_docname))) {
-                emit DocumentAccessed(_userAddress, _docname);
+                emit DocumentAccessed(_userAddress, _docname, documents[i].ipfshash);
+                //emit DocumentAccessedHash(_userAddress, documents[i].ipfshash);
                 return documents[i].ipfshash;
             }
         }

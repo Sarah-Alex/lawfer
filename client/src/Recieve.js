@@ -90,6 +90,10 @@ const Receive = () => {
         console.log('Selected document:', selectedDocument);
         const receipt = await contract.methods.getIPFSHashFromDocname(account, selectedDocument).send({ from: account });
         console.log("getIPFS receipt:", receipt);
+        const docname=receipt.events.DocumentAccessed.returnValues.docname;
+        console.log("docname:", docname);
+        const hash= receipt.events.DocumentAccessed.returnValues.dochash;
+        console.log("hash:", hash);
         // Add further logic here for handling the selected document, e.g., downloading it
     };
 
