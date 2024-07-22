@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useNavigate } from 'react-router-dom';
 import Access_Control from './contracts/Access_Control.json';
-
 import { recoverPersonalSignature } from 'eth-sig-util';
 import { bufferToHex } from 'ethereumjs-util';
 import './App.css';
@@ -89,8 +88,13 @@ function Login() {
                         const pubkey = await contract.methods.publickey(account).call();
                         if(pubkey==''){
                             console.log("first login");
+                            const publicKey=getPublicKey().then(function(ret){
+                                console.log("pubkey:", ret);
+                            });
+                            
+
                         }
-                        navigate('/receive');
+                        //navigate('/receive');
                         //window.alert("you are a reciever, page not built yet....")
                     }
                 } else  {
@@ -103,6 +107,29 @@ function Login() {
             console.error('Error:', error);
         }
     };
+    async function getPublicKey() {
+        if (window.ethereum) {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const userAddress = accounts[0];
+      
+          const message = `Sign this message to prove you have access to the account: ${userAddress}`;
+          const msg = `0x${Buffer.from(message, 'utf8').toString('hex')}`;
+      
+          const signature = await window.ethereum.request({
+            method: 'personal_sign',
+            params: [msg, userAddress]
+          });
+      
+          const publicKey = recoverPersonalSignature({
+            data: msg,
+            sig: signature
+          });
+      
+          return publicKey;
+        } else {
+          console.error("MetaMask is not installed");
+        }
+      }
 
     return (
         <div className="Login">
