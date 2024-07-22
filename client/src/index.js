@@ -46,7 +46,8 @@ import Send from './Send';
 import Receive from './Recieve';
 import ProtectedRoute from './ProtectedRoute';
 import reportWebVitals from './reportWebVitals';
-
+import { Buffer } from 'buffer';
+window.Buffer = Buffer;
 const router = createBrowserRouter([
   // {
   //   path: '/',

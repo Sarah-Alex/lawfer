@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useNavigate } from 'react-router-dom';
 import Access_Control from './contracts/Access_Control.json';
+
+import { recoverPersonalSignature } from 'eth-sig-util';
+import { bufferToHex } from 'ethereumjs-util';
 import './App.css';
 
 function Login() {
