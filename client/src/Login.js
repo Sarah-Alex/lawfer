@@ -87,20 +87,36 @@ function Login() {
                         const token = 'dummy-jwt-token'; // Replace with actual token logic
                         localStorage.setItem('token', token);
                         console.log("account", account)
-                        let publickey = await contract.methods.publickey(account).call();
-                        if(publickey===""){
-                            console.log("first login");
-                            //let publicKey;
-                            getPublicKey().then(function(ret){
-                                publickey=ret;
-                                //console.log("pubkey:", publickey);
-                                });    
+                        
+                    let publickey = await contract.methods.publickey(userAccount).call();
+                    console.log("Retrieved public key:", publickey);
+
+                    if (publickey === "") {
+                        console.log("First login, requesting public key...");
+                        const newPublicKey = await getPublicKey();
+                        console.log("Retrieved new public key:", newPublicKey);
+
+                        if (newPublicKey) {
+                            const tx = await contract.methods.registerPublicKey(newPublicKey).send({ from: userAccount });
+                            console.log("Transaction receipt:", tx);
+                            await web3.eth.getTransactionReceipt(tx.transactionHash); // Wait for confirmation
+
+                            // Verify public key after registration
+                            publickey = await contract.methods.publickey(userAccount).call();
+                            console.log("Updated public key:", publickey);
+
+                            if (publickey !== "") {
+                                console.log("Public key registered successfully.");
+                                // Optionally, navigate or show a message here
+                            } else {
+                                console.error("Public key was not registered properly.");
+                            }
+                        } else {
+                            console.error("Failed to retrieve public key.");
                         }
-                        console.log("pubkey:", publickey);
-                        const resp= await contract.methods.registerPublicKey(publickey).send({from: account});
-                        console.log(resp);
-                        //navigate('/receive');
-                        //window.alert("you are a reciever, page not built yet....")
+                    } else {
+                        console.log("Public key already registered.");
+                    }
                     }
                 } else  {
                     window.alert('Smart contract not deployed to detected network');
