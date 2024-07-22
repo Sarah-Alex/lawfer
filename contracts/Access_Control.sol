@@ -17,6 +17,7 @@ contract Access_Control {
     mapping(address => User) public receiverList;
     mapping(address => User) public senderList;
     mapping(string => User) public userFromName;
+    mapping(address=> string) public publickey;
     mapping(address => Document[]) public docAccessList;
     address public owner;
 
@@ -36,6 +37,10 @@ contract Access_Control {
     //event DocumentAccessedHash(address userAddress, string dochash);
     event DocumentsListed(address userAdress, string[] docnames);
     event AccessDenied(address sender, address userAddress, string message);
+
+    function registerPublicKey(string memory _publicKey) public {
+        publickey[msg.sender] = _publicKey;
+    }
 
     function getuserList(address _add) public view onlyOwner returns (string memory, string memory) {
         return (receiverList[_add].username, receiverList[_add].userID);

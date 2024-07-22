@@ -83,8 +83,12 @@ function Login() {
                     } else if(result==2){
                         const token = 'dummy-jwt-token'; // Replace with actual token logic
                         localStorage.setItem('token', token);
+                        const pubkey = await contract.methods.publickey(account).call();
+                        if(pubkey==''){
+                            console.log("first login");
+                        }
                         navigate('/receive');
-                        window.alert("you are a reciever, page not built yet....")
+                        //window.alert("you are a reciever, page not built yet....")
                     }
                 } else  {
                     window.alert('Smart contract not deployed to detected network');
