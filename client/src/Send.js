@@ -20,6 +20,7 @@ const Send = () => {
   const [docName, setDocName] = useState('');
   const [userName, setUserName] = useState('');
   //const [ipf, setUserName] = useState('');
+  const [user, setUser]=useState(null);
   const [account, setAccount] = useState('');
   const [contract, setContract] = useState('');
 
@@ -68,7 +69,38 @@ const Send = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     let ipfshash;
-    let userAccount
+    let userAccount;
+    
+    try {
+      const web3 = window.web3;
+      const accounts = await web3.eth.getAccounts();
+
+      if (accounts.length > 0) {
+          userAccount = accounts[0];
+          //setAccount(userAccount);
+          console.log('User account:', userAccount);
+
+          const networkId = await web3.eth.net.getId();
+          console.log('Network ID:', networkId);
+          const networkData = Access_Control.networks[networkId];
+
+          if (networkData) {
+              console.log("Network data:", networkData);
+              const abi = Access_Control.abi;
+              const address = networkData.address;
+              const contract = new web3.eth.Contract(abi, address);
+              setContract(contract);
+              console.log('Contract:', contract);
+              const user = await contract.methods.userFromName(userName).call();
+              setUser(user);
+              console.log('user:',user)
+              if(user.username.length===0){
+                window.alert("wrong username, try again")
+              }
+            }else {
+              window.alert('Smart contract not deployed to detected network');
+                 }
+
     if (buffer && file) {
       console.log('File to be uploaded:', buffer);
       try {
@@ -96,49 +128,20 @@ const Send = () => {
     } else {
       console.log('No file selected.');
     }
-
-
-
-    try {
-      const web3 = window.web3;
-      const accounts = await web3.eth.getAccounts();
-
-      if (accounts.length > 0) {
-          userAccount = accounts[0];
-          //setAccount(userAccount);
-          console.log('User account:', userAccount);
-
-          const networkId = await web3.eth.net.getId();
-          console.log('Network ID:', networkId);
-          const networkData = Access_Control.networks[networkId];
-
-          if (networkData) {
-              console.log("Network data:", networkData);
-              const abi = Access_Control.abi;
-              const address = networkData.address;
-              const contract = new web3.eth.Contract(abi, address);
-              setContract(contract);
-              console.log('Contract:', contract);
-              const user = await contract.methods.userFromName(userName).call();
-              console.log('user:',user)
-              if(user.username.length===0){
-                window.alert("wrong username, try again")
-              }
-              else{
-                let tempdocid=userName+docName;
-                //console.log("account address", account)
-                const response= await contract.methods.addDocument(docName,ipfshash,tempdocid,user.useraddress).send({from:userAccount});
-                console.log("response:",response);
-               }
-          }else {
-        window.alert('Smart contract not deployed to detected network');
-           }
-   }else {
+  }else {
     console.log('No accounts found');
      }
     } catch (error) {
       console.error('Error:', error);
   }
+
+
+  if(user.username.length>=0){
+    let tempdocid=userName+docName;
+    //console.log("account address", account)
+    const response= await contract.methods.addDocument(docName,ipfshash,tempdocid,user.useraddress).send({from:userAccount});
+    console.log("response:",response);
+   }
   };
 
   return (
