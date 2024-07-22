@@ -3,9 +3,10 @@ import Web3 from 'web3';
 import { useNavigate } from 'react-router-dom';
 import Access_Control from './contracts/Access_Control.json';
 import { recoverPersonalSignature } from 'eth-sig-util';
-import { bufferToHex } from 'ethereumjs-util';
+import { bufferToHex, recoverPublicKey, ecrecover, pubToAddress } from 'ethereumjs-util';
 import './App.css';
 
+const web3 = new Web3();
 function Login() {
     const [formData, setFormData] = useState({
         username: '',
@@ -85,15 +86,19 @@ function Login() {
                     } else if(result==2){
                         const token = 'dummy-jwt-token'; // Replace with actual token logic
                         localStorage.setItem('token', token);
-                        const pubkey = await contract.methods.publickey(account).call();
-                        if(pubkey==''){
+                        console.log("account", account)
+                        let publickey = await contract.methods.publickey(account).call();
+                        if(publickey===""){
                             console.log("first login");
-                            const publicKey=getPublicKey().then(function(ret){
-                                console.log("pubkey:", ret);
-                            });
-                            
-
+                            //let publicKey;
+                            getPublicKey().then(function(ret){
+                                publickey=ret;
+                                //console.log("pubkey:", publickey);
+                                });    
                         }
+                        console.log("pubkey:", publickey);
+                        const resp= await contract.methods.registerPublicKey(publickey).send({from: account});
+                        console.log(resp);
                         //navigate('/receive');
                         //window.alert("you are a reciever, page not built yet....")
                     }
@@ -107,29 +112,55 @@ function Login() {
             console.error('Error:', error);
         }
     };
-    async function getPublicKey() {
-        if (window.ethereum) {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const userAddress = accounts[0];
+    
+
+
+
+
+async function getPublicKey() {
+  if (window.ethereum) {
+    try {
+      // Request accounts from MetaMask
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const userAddress = accounts[0];
       
-          const message = `Sign this message to prove you have access to the account: ${userAddress}`;
-          const msg = `0x${Buffer.from(message, 'utf8').toString('hex')}`;
-      
-          const signature = await window.ethereum.request({
-            method: 'personal_sign',
-            params: [msg, userAddress]
-          });
-      
-          const publicKey = recoverPersonalSignature({
-            data: msg,
-            sig: signature
-          });
-      
-          return publicKey;
-        } else {
-          console.error("MetaMask is not installed");
-        }
+      // Message to be signed
+      const message = `Sign this message to prove you have access to the account: ${userAddress}`;
+      const msgHex = `0x${Buffer.from(message, 'utf8').toString('hex')}`;
+
+      // Request the user to sign the message
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [msgHex, userAddress]
+      });
+
+      // Hash the message
+      const msgHash = web3.utils.sha3(Buffer.from(message, 'utf8'));
+
+      // Extract the signature components
+      const sig = Buffer.from(signature.slice(2), 'hex');
+      const r = sig.slice(0, 32);
+      const s = sig.slice(32, 64);
+      let v = sig[64]; // `v` might be 0 or 1
+
+      // Adjust v if necessary
+      if (v === 0 || v === 1) {
+        v += 27; // Convert v to 27 or 28
       }
+
+      // Recover the public key
+      const pubKey = ecrecover(Buffer.from(msgHash.slice(2), 'hex'), v, r, s);
+      return `0x${pubKey.toString('hex')}`;
+
+    } catch (error) {
+      console.error("Error retrieving public key:", error);
+    }
+  } else {
+    console.error("MetaMask is not installed");
+  }
+}
+
+
 
     return (
         <div className="Login">
