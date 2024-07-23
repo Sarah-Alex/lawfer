@@ -10,12 +10,14 @@ module.exports = {
       "url": require.resolve("url/"),
       "assert": require.resolve("assert/"),
       "stream": require.resolve("stream-browserify"),
-      "buffer": require.resolve("buffer")
+      "buffer": require.resolve("buffer"),
+      "process": require.resolve("process/browser")
     };
     config.plugins = [
       ...config.plugins,
       new webpack.ProvidePlugin({
-        Buffer: ['buffer', 'Buffer']
+        Buffer: ['buffer', 'Buffer'],
+        process: 'process/browser'
       })
     ];
     return config;
