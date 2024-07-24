@@ -12,11 +12,12 @@ contract Access_Control {
         string docname;
         string ipfshash;
         string docID;
+        string symmkey;
     }
 
     mapping(address => User) public receiverList;
     mapping(address => User) public senderList;
-    mapping(string => User) public userFromName;
+    mapping(string => User) public userFromNameMap;
     mapping(address=> string) public publickey;
     mapping(address => Document[]) public docAccessList;
     address public owner;
@@ -33,7 +34,7 @@ contract Access_Control {
     event UserAdded(address userAddress, string username, string userID, bool sender);
     event UserDeleted(address userAddress, bool sender);
     event DocumentAdded(address sender, address userAddress, string docname, string ipfshash, string docID);
-    event DocumentAccessed(address userAddress, string docname, string dochash);
+    event DocumentAccessed(address userAddress, Document document);
     //event DocumentAccessedHash(address userAddress, string dochash);
     event DocumentsListed(address userAdress, string[] docnames);
     event AccessDenied(address sender, address userAddress, string message);
@@ -59,7 +60,7 @@ contract Access_Control {
         if (sender) {
             senderList[_userAddress] = new_user;
         } else {
-            userFromName[_username] = new_user;
+            userFromNameMap[_username] = new_user;
             receiverList[_userAddress] = new_user;
         }
         
@@ -73,7 +74,7 @@ contract Access_Control {
         if (sender) {
             delete senderList[_userAddress];
         } else {
-            delete userFromName[receiverList[_userAddress].username];
+            delete userFromNameMap[receiverList[_userAddress].username];
             delete receiverList[_userAddress];
         }
         
@@ -95,13 +96,14 @@ contract Access_Control {
         return 0;
     }
 
-    function addDocument(string memory _docname, string memory _ipfshash, string memory _docID, address _userAddress) public {
+    function addDocument(string memory _docname, string memory _ipfshash, string memory _docID, address _userAddress, string memory _symmkey) public {
         require(bytes(senderList[msg.sender].username).length != 0, "account used is not sender");
 
         Document memory new_doc;
         new_doc.docname = _docname;
         new_doc.ipfshash = _ipfshash;
         new_doc.docID = _docID;
+        new_doc.symmkey=_symmkey;
 
         docAccessList[_userAddress].push(new_doc);
 
@@ -132,7 +134,7 @@ contract Access_Control {
         return docnames;
     }
 
-    function getIPFSHashFromDocname(address _userAddress, string memory _docname) public returns (string memory) {
+    function getDocumentFromDocname(address _userAddress, string memory _docname) public returns (Document memory) {
         require(msg.sender == _userAddress, "attempt to access denied");
         
 
@@ -140,9 +142,9 @@ contract Access_Control {
 
         for (uint i = 0; i < documents.length; i++) {
             if (keccak256(abi.encodePacked(documents[i].docname)) == keccak256(abi.encodePacked(_docname))) {
-                emit DocumentAccessed(_userAddress, _docname, documents[i].ipfshash);
+                emit DocumentAccessed(_userAddress, documents[i]);
                 //emit DocumentAccessedHash(_userAddress, documents[i].ipfshash);
-                return documents[i].ipfshash;
+                return documents[i];
             }
         }
 

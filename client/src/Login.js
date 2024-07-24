@@ -171,8 +171,8 @@ function Login() {
                     let publickey = await contract.methods.publickey(userAccount).call();
                     console.log("Retrieved public key:", publickey);
 
-                    //if (publickey === "") {
-                    if (true){
+                    if (publickey === "") {
+                    // if (true){
                         console.log("First login, requesting public key...");
                         const newPublicKey = await getPublicKey();
                         console.log("Retrieved new public key:", newPublicKey);
@@ -198,6 +198,7 @@ function Login() {
                     } else {
                         console.log("Public key already registered.");
                     }
+                    navigate('/receive');
                     }
                 } else  {
                     window.alert('Smart contract not deployed to detected network');
@@ -208,7 +209,7 @@ function Login() {
         } catch (error) {
             console.error('Error:', error);
         }
-        navigate('/receive');
+        
     };
     
 
