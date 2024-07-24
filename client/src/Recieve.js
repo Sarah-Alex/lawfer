@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import Access_Control from './contracts/Access_Control.json';
 import Web3 from 'web3';
+//import { saveAs } from 'file-saver';
 import CryptoJS from 'crypto-js';
 
 const Receive = () => {
@@ -86,33 +87,68 @@ const Receive = () => {
         setSelectedDocument(event.target.value);
     };
 
+    const handleSubmit = async(event) => {
+        event.preventDefault();
+        console.log('Selected document:', selectedDocument);
+    
+        try {
+            const receipt = await contract.methods.getDocumentFromDocname(account, selectedDocument).send({ from: account });
+            console.log("getDocumentFromDocname receipt:", receipt);
+    
+            const ipfsHashEncrypted = receipt.events.DocumentAccessed.returnValues.document.ipfshash.split(',');
+            const symmKeyEncrypted = receipt.events.DocumentAccessed.returnValues.document.symmkey.split(',');
+    
+            console.log("Encrypted IPFS Hash:", ipfsHashEncrypted);
+            console.log("Encrypted Symmetric Key:", symmKeyEncrypted);
+    
+            if (!ipfsHashEncrypted || !symmKeyEncrypted) {
+                throw new Error('Encrypted data is missing or invalid');
+            }
+    
+            const decryptedIpfsHashArray = await decryptData(ipfsHashEncrypted);
+            
+            const decryptedSymmetricKeyArray = await decryptData(symmKeyEncrypted);
+    
+            const decryptedIpfsHash = new TextDecoder().decode(decryptedIpfsHashArray);
+            const decryptedSymmetricKey = new TextDecoder().decode(decryptedSymmetricKeyArray);
+    
+            console.log("Decrypted IPFS Hash:", decryptedIpfsHash);
+            console.log("Decrypted Symmetric Key:", decryptedSymmetricKey);
+    
+            await downloadAndDecryptFileFromIPFS(decryptedIpfsHash, decryptedSymmetricKey);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+    
     const decryptData = async (encryptedData) => {
         const dbName = 'cryptoKeysDB';
         const storeName = 'privateKeys';
-
+        let privateKey;
+    
         const openDB = indexedDB.open(dbName, 1);
-
-        const privateKey = await new Promise((resolve, reject) => {
-            openDB.onsuccess = function () {
+    
+        privateKey = new Promise((resolve, reject) => {
+            openDB.onsuccess = function() {
                 const db = openDB.result;
                 const tx = db.transaction(storeName);
                 const store = tx.objectStore(storeName);
                 const getRequest = store.get('userPrivateKey');
-
-                getRequest.onsuccess = function () {
+    
+                getRequest.onsuccess = function() {
                     const privateKeyArray = getRequest.result.key;
                     resolve(new Uint8Array(privateKeyArray));
                 };
-
-                getRequest.onerror = function () {
+    
+                getRequest.onerror = function() {
                     reject(new Error('Failed to retrieve private key'));
                 };
             };
         });
-
+    
         const importedPrivateKey = await window.crypto.subtle.importKey(
             'pkcs8',
-            privateKey.buffer,
+            await privateKey,
             {
                 name: 'RSA-OAEP',
                 hash: 'SHA-256'
@@ -120,46 +156,33 @@ const Receive = () => {
             false,
             ['decrypt']
         );
-
+    
+        const encryptedDataArray = typeof encryptedData === 'string' ? new Uint8Array(encryptedData.split('').map(c => c.charCodeAt(0))) : new Uint8Array(encryptedData);
+    
         const decryptedData = await window.crypto.subtle.decrypt(
             {
                 name: 'RSA-OAEP'
             },
             importedPrivateKey,
-            encryptedData
+            encryptedDataArray
         );
-
-        return new TextDecoder().decode(decryptedData);
+    
+        return new Uint8Array(decryptedData);
     };
-
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        console.log('Selected document:', selectedDocument);
-        const receipt = await contract.methods.getDocumentFromDocname(account, selectedDocument).send({ from: account });
-        console.log("getDocument receipt:", receipt);
-        console.log("check:", receipt.events.DocumentAccessed)
-        const document = receipt.events.DocumentAccessed.returnValues.document;
-        // console.log("document:", document)
-        // console.log("document.ipfshash", document.ipfshash)
-        // const encryptedHash = new Uint8Array(document.ipfshash);
-        // console.log("enc hash:", encryptedHash)
-        // const encryptedKey = new Uint8Array(document.symmkey);
-
-        const encryptedHashArray = document.ipfshash.split(',').map(Number);
-        const encryptedKeyArray = document.symmkey.split(',').map(Number);
-
-        const encryptedHash = new Uint8Array(encryptedHashArray);
-        const encryptedKey = new Uint8Array(encryptedKeyArray);
-
-        const ipfsHash = await decryptData(encryptedHash);
-        const symmKey = await decryptData(encryptedKey);
-        console.log("Decrypted IPFS Hash:", ipfsHash);
-        console.log("Decrypted Symmetric Key:", symmKey);
-
-        downloadAndDecryptFileFromIPFS(ipfsHash, symmKey);
-    };
-
-    const downloadAndDecryptFileFromIPFS = async (hash, key) => {
+    function convertWordArrayToUint8Array(wordArray) {
+        var arrayOfWords = wordArray.hasOwnProperty("words") ? wordArray.words : [];
+        var length = wordArray.hasOwnProperty("sigBytes") ? wordArray.sigBytes : arrayOfWords.length * 4;
+        var uInt8Array = new Uint8Array(length), index=0, word, i;
+        for (i=0; i<length; i++) {
+            word = arrayOfWords[i];
+            uInt8Array[index++] = word >> 24;
+            uInt8Array[index++] = (word >> 16) & 0xff;
+            uInt8Array[index++] = (word >> 8) & 0xff;
+            uInt8Array[index++] = word & 0xff;
+        }
+        return uInt8Array;
+    }
+    const downloadAndDecryptFileFromIPFS = async (hash, aesKey) => {
         const url = `https://gateway.pinata.cloud/ipfs/${hash}`;
         try {
             const response = await fetch(url);
@@ -167,19 +190,36 @@ const Receive = () => {
                 throw new Error('Network response was not ok');
             }
             const encryptedFile = await response.text();
-            const decryptedFile = CryptoJS.AES.decrypt(encryptedFile, key).toString(CryptoJS.enc.Utf8);
-            const blob = new Blob([decryptedFile], { type: 'application/octet-stream' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = selectedDocument; // Use document name as the download filename
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            console.log("Encrypted File Data:", encryptedFile);
+            console.log("the type:",typeof(encryptedFile));
+            console.log("the type of the aes key:", typeof(aesKey));
+            console.log("aeskey:", aesKey);
+           // const aesKeyBytes = CryptoJS.enc.Base64.parse(aesKeyBase64);
+
+
+            // Convert the aesKey string to a WordArray object
+            const keyWordArray = CryptoJS.enc.Base64.parse(aesKey);
+            console.log("check point 1");
+
+            // Decrypt the encryptedFile
+            const decrypted = CryptoJS.AES.decrypt(encryptedFile, aesKey);
+            console.log("check point 2");
+            const typedArray = convertWordArrayToUint8Array(decrypted);
+            var fileDec = new Blob([typedArray]);                                   // Create blob from typed array
+
+        var a = document.createElement("a");
+        var urll = window.URL.createObjectURL(fileDec);
+        //var filename = file.name.substr(0, file.name.length - 4) + ".dec";
+        a.href = urll;
+        a.download = selectedDocument + '.pdf';;
+        a.click();
+        window.URL.revokeObjectURL(urll);
+
+
         } catch (error) {
             console.error('Error downloading file:', error);
         }
     };
-
     return (
         <div className="App">
             <header className="App-header">

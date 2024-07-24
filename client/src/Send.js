@@ -124,9 +124,14 @@ const Send = () => {
           console.log("pubk:", publickey)
 
           // Encrypt the file with AES
-          const aesKey = CryptoJS.lib.WordArray.random(16).toString();
-          const encryptedFile = CryptoJS.AES.encrypt(buffer.toString(), aesKey).toString();
-
+          
+          const aesKey= CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Base64);
+          const WordArray = CryptoJS.lib.WordArray.create(buffer);
+          console.log("aes key string:", aesKey);
+          const encryptedFile = CryptoJS.AES.encrypt(WordArray, aesKey).toString();
+          console.log("check")
+          //const encryptedFile= encryptedFile0.toString();
+          console.log("check")
           // Encrypt the AES key with the recipient's public key
           const encryptedAesKey = await encryptDataWithPublicKey(aesKey, publickey);
 
