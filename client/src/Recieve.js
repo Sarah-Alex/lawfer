@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import Access_Control from './contracts/Access_Control.json';
 import Web3 from 'web3';
+import CryptoJS from 'crypto-js';
 
 const Receive = () => {
     const [account, setAccount] = useState('');
@@ -85,27 +86,89 @@ const Receive = () => {
         setSelectedDocument(event.target.value);
     };
 
-    const handleSubmit = async(event) => {
-        event.preventDefault();
-        console.log('Selected document:', selectedDocument);
-        const receipt = await contract.methods.getIPFSHashFromDocname(account, selectedDocument).send({ from: account });
-        console.log("getIPFS receipt:", receipt);
-        const docname=receipt.events.DocumentAccessed.returnValues.docname;
-        console.log("docname:", docname);
-        const hash= receipt.events.DocumentAccessed.returnValues.dochash;
-        console.log("hash:", hash);
-        downloadFileFromIPFS(hash);
-        // Add further logic here for handling the selected document, e.g., downloading it
+    const decryptData = async (encryptedData) => {
+        const dbName = 'cryptoKeysDB';
+        const storeName = 'privateKeys';
+
+        const openDB = indexedDB.open(dbName, 1);
+
+        const privateKey = await new Promise((resolve, reject) => {
+            openDB.onsuccess = function () {
+                const db = openDB.result;
+                const tx = db.transaction(storeName);
+                const store = tx.objectStore(storeName);
+                const getRequest = store.get('userPrivateKey');
+
+                getRequest.onsuccess = function () {
+                    const privateKeyArray = getRequest.result.key;
+                    resolve(new Uint8Array(privateKeyArray));
+                };
+
+                getRequest.onerror = function () {
+                    reject(new Error('Failed to retrieve private key'));
+                };
+            };
+        });
+
+        const importedPrivateKey = await window.crypto.subtle.importKey(
+            'pkcs8',
+            privateKey.buffer,
+            {
+                name: 'RSA-OAEP',
+                hash: 'SHA-256'
+            },
+            false,
+            ['decrypt']
+        );
+
+        const decryptedData = await window.crypto.subtle.decrypt(
+            {
+                name: 'RSA-OAEP'
+            },
+            importedPrivateKey,
+            encryptedData
+        );
+
+        return new TextDecoder().decode(decryptedData);
     };
 
-    const downloadFileFromIPFS = async (hash) => {
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        console.log('Selected document:', selectedDocument);
+        const receipt = await contract.methods.getDocumentFromDocname(account, selectedDocument).send({ from: account });
+        console.log("getDocument receipt:", receipt);
+        console.log("check:", receipt.events.DocumentAccessed)
+        const document = receipt.events.DocumentAccessed.returnValues.document;
+        // console.log("document:", document)
+        // console.log("document.ipfshash", document.ipfshash)
+        // const encryptedHash = new Uint8Array(document.ipfshash);
+        // console.log("enc hash:", encryptedHash)
+        // const encryptedKey = new Uint8Array(document.symmkey);
+
+        const encryptedHashArray = document.ipfshash.split(',').map(Number);
+        const encryptedKeyArray = document.symmkey.split(',').map(Number);
+
+        const encryptedHash = new Uint8Array(encryptedHashArray);
+        const encryptedKey = new Uint8Array(encryptedKeyArray);
+
+        const ipfsHash = await decryptData(encryptedHash);
+        const symmKey = await decryptData(encryptedKey);
+        console.log("Decrypted IPFS Hash:", ipfsHash);
+        console.log("Decrypted Symmetric Key:", symmKey);
+
+        downloadAndDecryptFileFromIPFS(ipfsHash, symmKey);
+    };
+
+    const downloadAndDecryptFileFromIPFS = async (hash, key) => {
         const url = `https://gateway.pinata.cloud/ipfs/${hash}`;
         try {
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            const blob = await response.blob();
+            const encryptedFile = await response.text();
+            const decryptedFile = CryptoJS.AES.decrypt(encryptedFile, key).toString(CryptoJS.enc.Utf8);
+            const blob = new Blob([decryptedFile], { type: 'application/octet-stream' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = selectedDocument; // Use document name as the download filename
