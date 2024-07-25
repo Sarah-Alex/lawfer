@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
+//resolve.fallback: { "crypto": require.resolve("crypto-browserify") }
 
 module.exports = {
   webpack: (config, env) => {
@@ -11,7 +12,8 @@ module.exports = {
       "assert": require.resolve("assert/"),
       "stream": require.resolve("stream-browserify"),
       "buffer": require.resolve("buffer"),
-      "process": require.resolve("process/browser")
+      "process": require.resolve("process/browser"),
+      "crypto": require.resolve("crypto-browserify")
     };
     config.plugins = [
       ...config.plugins,

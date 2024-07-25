@@ -8,9 +8,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
-const accountSid = 'AC09fd555d7198496e628eb5dd55eec551'; // Replace with your Twilio Account SID
-const authToken = '96ceef7d2a95e0b08ec05dcee2064ba6'; // Replace with your Twilio Auth Token
-const serviceSid = 'VA33427ee8fa21a86b7b5b6a3c390bbba1'; // Replace with your Twilio Service SID
+const accountSid = '----'; // Replace with your Twilio Account SID
+const authToken = '----'; // Replace with your Twilio Auth Token
+const serviceSid = '----'; // Replace with your Twilio Service SID
 const client = twilio(accountSid, authToken);
 
 

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { useNavigate } from 'react-router-dom';
 import Access_Control from './contracts/Access_Control.json';
+//import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
 //import { recoverPersonalSignature } from 'eth-sig-util';
-import { bufferToHex, recoverPublicKey, ecrecover, pubToAddress } from 'ethereumjs-util';
+//import { bufferToHex, recoverPublicKey, ecrecover, pubToAddress } from 'ethereumjs-util';
 import './App.css';
 
 const web3 = new Web3();
@@ -18,7 +20,9 @@ function Login() {
     });
 
     const [account, setAccount] = useState('');
+    const [result, setResult]=useState(null);
     const [contract, setContract] = useState('');
+    const [phonehash, setPhonehash]= useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -54,9 +58,65 @@ function Login() {
             [name]: value
         }));
     };
-
+    // const hashPhoneNumber = (phoneNumber) => {
+    //     const hash = crypto.createHash('sha256');
+    //     hash.update(phoneNumber);
+    //     return hash.digest('hex');
+    // };
+    const hashPhoneNumber = (phoneNumber) => {
+        return CryptoJS.SHA256(phoneNumber).toString(CryptoJS.enc.Hex);
+    };
     const sendVerificationCode = async () => {
         try {
+            const web3 = window.web3;
+            const accounts = await web3.eth.getAccounts();
+            //const userAccount = accounts[0];
+            const phoneHash = hashPhoneNumber(formData.userphone);
+
+            
+            const networkId = await web3.eth.net.getId();
+            console.log('Network ID:', networkId);
+            const networkData = Access_Control.networks[networkId];
+            if (accounts.length > 0) {
+                const userAccount = accounts[0];
+                setAccount(userAccount);
+                console.log('User account:', userAccount);
+            if (networkData) {
+                console.log("Network data:", networkData);
+                const abi = Access_Control.abi;
+                const address = networkData.address;
+                console.log(abi)
+                const contract = new web3.eth.Contract(abi, address);
+                setContract(contract);
+                console.log('Contract:', contract);
+                console.log(userAccount, formData.username, formData.userID)
+                const result = await contract.methods.verifyUser(userAccount, formData.username, formData.userID).call();
+                console.log("Verification result:", result);
+                setResult(result);
+
+
+            
+            
+            let isRegistered = await contract.methods.isUserRegistered(userAccount).call();
+            if (!isRegistered) {
+                await contract.methods.registerPhoneNumber(web3.utils.sha3(phoneHash)).send({ from: userAccount });
+                console.log("Phone number registered.");
+            } else {
+                console.log("Phone number already registered.");
+            }
+    
+            const isVerified = await contract.methods.verifyPhoneNumber(web3.utils.sha3(phoneHash)).call({ from: userAccount });
+            if (!isVerified) {
+                console.error('Phone number verification failed.');
+                return;
+            }
+            else{
+                console.log('Phone number verified')
+            }
+        console.log(formData.userphone, typeof(formData.userphone));
+        //const completephone = `+91${formData.userphone}`;
+
+        //console.log(completephone, typeof(completephone))
             const response = await fetch('http://localhost:3001/send-code', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -81,6 +141,13 @@ function Login() {
     
             alert('Verification code sent!');
             setFormData((prevData) => ({ ...prevData, isCodeSent: true }));
+        } else  {
+            window.alert('Smart contract not deployed to detected network');
+        }
+    }
+        else {
+            console.log('No accounts found');
+        }
         } catch (error) {
             console.error('Error:', error);
         }
@@ -126,86 +193,85 @@ function Login() {
     };
 
     const handleSubmit = async (e) => {
+        let userAccount=account
         e.preventDefault();
-        // if (!formData.isCodeVerified) {
-        //     window.alert('Please verify your phone number first.');
-        //     return;
-        // }
+        if (!formData.isCodeVerified) {
+            window.alert('Please verify your phone number first.');
+            return;
+        }
         try {
             const web3 = window.web3;
             const accounts = await web3.eth.getAccounts();
 
-            if (accounts.length > 0) {
-                const userAccount = accounts[0];
-                setAccount(userAccount);
-                console.log('User account:', userAccount);
-
-                const networkId = await web3.eth.net.getId();
-                console.log('Network ID:', networkId);
-                const networkData = Access_Control.networks[networkId];
-
-                if (networkData) {
-                    console.log("Network data:", networkData);
-                    const abi = Access_Control.abi;
-                    const address = networkData.address;
-                    console.log(abi)
-                    const contract = new web3.eth.Contract(abi, address);
-                    setContract(contract);
-                    console.log('Contract:', contract);
-                    console.log(userAccount, formData.username, formData.userID)
-                    const result = await contract.methods.verifyUser(userAccount, formData.username, formData.userID).call();
-                    console.log("Verification result:", result);
-
+            
                     if (result == 0) {
                         window.alert("Invalid credentials. Please try again.");
-                    } else if(result==1){
-
+                    } 
+                    else if((result==1)||(result==2)){       //if user is registered as sender or receiver
+                        console.log("do i execute?")
                         const token = 'dummy-jwt-token'; // Replace with actual token logic
                         localStorage.setItem('token', token);
-                        navigate('/send'); // Redirect to Send page
-                    } else if(result==2){
-                        const token = 'dummy-jwt-token'; // Replace with actual token logic
-                        localStorage.setItem('token', token);
-                        console.log("account", account)
+                        // let isRegistered = await contract.methods.isUserRegistered(userAccount).call();
+                        // const phoneHash = hashPhoneNumber(formData.userphone);
                         
-                    let publickey = await contract.methods.publickey(userAccount).call();
-                    console.log("Retrieved public key:", publickey);
+                        
+                        // if (!isRegistered) {
+                        //     await contract.methods.registerPhoneNumber(web3.utils.sha3(phoneHash)).send({ from: userAccount });
+                        //     console.log("Phone number registered.");
+                        // } else {
+                        //     console.log("Phone number already registered.");
+                        // }
+                        
+                        // const isVerified = await contract.methods.verifyPhoneNumber(web3.utils.sha3(phoneHash)).call({ from: userAccount });
+                        // if (!isVerified) {
+                        //     console.error('Phone number verification failed.');
+                        //     return;
+                        // }
 
-                    if (publickey === "") {
-                    // if (true){
-                        console.log("First login, requesting public key...");
-                        const newPublicKey = await getPublicKey();
-                        console.log("Retrieved new public key:", newPublicKey);
-
-                        if (newPublicKey) {
-                            const tx = await contract.methods.registerPublicKey(newPublicKey).send({ from: userAccount });
-                            console.log("Transaction receipt:", tx);
-                            await web3.eth.getTransactionReceipt(tx.transactionHash); // Wait for confirmation
-
-                            // Verify public key after registration
-                            publickey = await contract.methods.publickey(userAccount).call();
-                            console.log("Updated public key:", publickey);
-                            testEncryptionDecryption(publickey);
-                            if (publickey !== "") {
-                                console.log("Public key registered successfully.");
-                                // Optionally, navigate or show a message here
+                        if(result==1){
+                            console.log("do I execute?")
+                            
+                            navigate('/send'); // Redirect to Send page
+                        } 
+                        else if(result==2){
+                            
+                            console.log("account", account)
+                            
+                        let publickey = await contract.methods.publickey(userAccount).call();
+                        console.log("Retrieved public key:", publickey);
+    
+                        if (publickey === "") {
+                        // if (true){
+                            console.log("First login, requesting public key...");
+                            const newPublicKey = await getPublicKey();
+                            console.log("Retrieved new public key:", newPublicKey);
+    
+                            if (newPublicKey) {
+                                const tx = await contract.methods.registerPublicKey(newPublicKey).send({ from: userAccount });
+                                console.log("Transaction receipt:", tx);
+                                await web3.eth.getTransactionReceipt(tx.transactionHash); // Wait for confirmation
+    
+                                // Verify public key after registration
+                                publickey = await contract.methods.publickey(userAccount).call();
+                                console.log("Updated public key:", publickey);
+                                testEncryptionDecryption(publickey);
+                                if (publickey !== "") {
+                                    console.log("Public key registered successfully.");
+                                    // Optionally, navigate or show a message here
+                                } else {
+                                    console.error("Public key was not registered properly.");
+                                }
                             } else {
-                                console.error("Public key was not registered properly.");
+                                console.error("Failed to retrieve public key.");
                             }
                         } else {
-                            console.error("Failed to retrieve public key.");
+                            console.log("Public key already registered.");
                         }
-                    } else {
-                        console.log("Public key already registered.");
+                        navigate('/receive');
+                        }
                     }
-                    navigate('/receive');
-                    }
-                } else  {
-                    window.alert('Smart contract not deployed to detected network');
-                }
-            } else {
-                console.log('No accounts found');
-            }
+                    
+               
         } catch (error) {
             console.error('Error:', error);
         }
@@ -216,48 +282,7 @@ function Login() {
 
 
 
-// async function getPublicKey() {
-//   if (window.ethereum) {
-//     try {
-//       // Request accounts from MetaMask
-//       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-//       const userAddress = accounts[0];
-      
-//       // Message to be signed
-//       const message = `Sign this message to prove you have access to the account: ${userAddress}`;
-//       const msgHex = `0x${Buffer.from(message, 'utf8').toString('hex')}`;
 
-//       // Request the user to sign the message
-//       const signature = await window.ethereum.request({
-//         method: 'personal_sign',
-//         params: [msgHex, userAddress]
-//       });
-
-//       // Hash the message
-//       const msgHash = web3.utils.sha3(Buffer.from(message, 'utf8'));
-
-//       // Extract the signature components
-//       const sig = Buffer.from(signature.slice(2), 'hex');
-//       const r = sig.slice(0, 32);
-//       const s = sig.slice(32, 64);
-//       let v = sig[64]; // `v` might be 0 or 1
-
-//       // Adjust v if necessary
-//       if (v === 0 || v === 1) {
-//         v += 27; // Convert v to 27 or 28
-//       }
-
-//       // Recover the public key
-//       const pubKey = ecrecover(Buffer.from(msgHash.slice(2), 'hex'), v, r, s);
-//       return `0x${pubKey.toString('hex')}`;
-
-//     } catch (error) {
-//       console.error("Error retrieving public key:", error);
-//     }
-//   } else {
-//     console.error("MetaMask is not installed");
-//   }
-// }
 const getPublicKey= async()=>{
     // Generate the key pair
   const keyPair = await window.crypto.subtle.generateKey(
@@ -437,15 +462,16 @@ async function encryptData(publicKeyBase64, data) {
                         value={formData.userID}
                         onChange={handleChange}
                     />
-                    <input
+                   <input
                         type="tel"
                         name="userphone"
                         placeholder="Phone no."
-                        pattern="[0-9]{10}"
+                        pattern="\+?[0-9\s\-]{7,15}"
+
                         value={formData.userphone}
                         onChange={handleChange}
                     />
-                    {/* {formData.isCodeSent ? (
+                     {formData.isCodeSent ? (
                         <>
                             <input
                                 type="text"
@@ -458,7 +484,7 @@ async function encryptData(publicKeyBase64, data) {
                         </>
                     ) : (
                         <button type="button" onClick={sendVerificationCode}>Send Verification Code</button>
-                    )} */}
+                    )} 
                     <button type="submit">Submit</button>
                 </form>
             </header>

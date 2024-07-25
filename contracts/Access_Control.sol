@@ -14,12 +14,14 @@ contract Access_Control {
         string docID;
         string symmkey;
     }
-
+    
     mapping(address => User) public receiverList;
     mapping(address => User) public senderList;
     mapping(string => User) public userFromNameMap;
     mapping(address=> string) public publickey;
     mapping(address => Document[]) public docAccessList;
+    mapping(address => bytes32) public userPhoneHashes;
+    mapping(address => bool) public isUserRegistered;
     address public owner;
 
     constructor() public {
@@ -45,6 +47,16 @@ contract Access_Control {
 
     function getuserList(address _add) public view onlyOwner returns (string memory, string memory) {
         return (receiverList[_add].username, receiverList[_add].userID);
+    }
+
+    function registerPhoneNumber(bytes32 phoneHash) public {
+        require(!isUserRegistered[msg.sender], "User already registered");
+        userPhoneHashes[msg.sender] = phoneHash;
+        isUserRegistered[msg.sender] = true;
+    }
+
+    function verifyPhoneNumber(bytes32 phoneHash) public view returns (bool) {
+        return userPhoneHashes[msg.sender] == phoneHash;
     }
 
     function addUser(address _userAddress, string memory _username, string memory _userID, bool sender) public onlyOwner {
