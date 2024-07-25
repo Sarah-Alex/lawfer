@@ -27,6 +27,8 @@ function Login() {
 
     useEffect(() => {
         let isRequestingAccounts = false;
+        // localStorage.removeItem('token');
+        // localStorage.removeItem('verificationTime');
         const loadWeb3 = async () => {
             if (isRequestingAccounts) return;
             isRequestingAccounts = true;
@@ -184,6 +186,11 @@ function Login() {
                 }
                 setFormData((prevData) => ({ ...prevData, isCodeVerified: true }));
                 console.log('Code verified:', data);
+                // Store token and verification time
+                const token = 'dummy-jwt-token'; // Replace with actual token logic
+                const verificationTime = Date.now();
+                localStorage.setItem('token', token);
+                localStorage.setItem('verificationTime', verificationTime);
             } else {
                 console.error('Error verifying code:', data);
             }
@@ -195,6 +202,12 @@ function Login() {
     const handleSubmit = async (e) => {
         let userAccount=account
         e.preventDefault();
+         // Check if the verification time is within 15 minutes
+        const verificationTime = localStorage.getItem('verificationTime');
+        if (!verificationTime || Date.now() - verificationTime > 15 * 60 * 1000) { // 15 minutes in milliseconds
+            window.alert('Please verify your phone number again.');
+            return;
+        }
         if (!formData.isCodeVerified) {
             window.alert('Please verify your phone number first.');
             return;
